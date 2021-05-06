@@ -31,7 +31,8 @@ class AlgorithmStatusView(viewsets.ModelViewSet):
         weeks = 52
         residents = []
         rotations = []
-        rotationMinMax = {}
+        rotationMinMaxResidents = {}
+        rotationMinMaxContinous = {}
         essentialRotations = [] #that are not overnight rotations
         overnightRotations = []
         otherRotations = []
@@ -76,7 +77,8 @@ class AlgorithmStatusView(viewsets.ModelViewSet):
                 endWeek = getWeekDelta(scheduleStart, rotation.EndRotation)
                 pgy = int(str(rotation.ResidentYear)[len(str(rotation.ResidentYear)) - 1]) #Force cast as int
                 rotations.append(rotation.RotationType)
-                rotationMinMax.update({rotation.RotationType: (rotation.MinResident, rotation.MaxResident)})
+                rotationMinMaxResidents.update({rotation.RotationType: (rotation.MinResident, rotation.MaxResident)})
+                rotationMinMaxContinous.update({rotation.RotationType: (rotation.MinContinuedWeeks, rotation.MaxContinuedWeeks)})
                 if rotation.Essential:
                     if not rotation.Overnight: #to track essential rotations that are not also overnight
                         essentialRotations.append(rotation.RotationType)
@@ -103,8 +105,8 @@ class AlgorithmStatusView(viewsets.ModelViewSet):
             for rotation in essentialRotations:
                 if week in rotationWeeks[rotation]:
                     # In every week, each rotation is assigned by min/max required residents
-                    problem += pulp.lpSum(essential[week, resident, rotation] for resident in residents) >= rotationMinMax[rotation][0] #min
-                    problem += pulp.lpSum(essential[week, resident, rotation] for resident in residents) <= rotationMinMax[rotation][1] #max
+                    problem += pulp.lpSum(essential[week, resident, rotation] for resident in residents) >= rotationMinMaxResidents[rotation][0] #min
+                    problem += pulp.lpSum(essential[week, resident, rotation] for resident in residents) <= rotationMinMaxResidents[rotation][1] #max
                 else:
                     # otherwise, if rotation does not span current week, no residents assigned
                     problem += pulp.lpSum(essential[week, resident, rotation] for resident in residents) == 0
@@ -112,8 +114,8 @@ class AlgorithmStatusView(viewsets.ModelViewSet):
             for rotation in overnightRotations:
                 if week in rotationWeeks[rotation]:
                     # In every week, each rotation is assigned by min/max required residents
-                    problem += pulp.lpSum(overnight[week, resident, rotation] for resident in residents) >= rotationMinMax[rotation][0] #min
-                    problem += pulp.lpSum(overnight[week, resident, rotation] for resident in residents) <= rotationMinMax[rotation][1] #max
+                    problem += pulp.lpSum(overnight[week, resident, rotation] for resident in residents) >= rotationMinMaxResidents[rotation][0] #min
+                    problem += pulp.lpSum(overnight[week, resident, rotation] for resident in residents) <= rotationMinMaxResidents[rotation][1] #max
                 else:
                     # otherwise, if rotation does not span current week, no residents assigned
                     problem += pulp.lpSum(overnight[week, resident, rotation] for resident in residents) == 0
@@ -121,8 +123,8 @@ class AlgorithmStatusView(viewsets.ModelViewSet):
             for rotation in otherRotations:
                 if week in rotationWeeks[rotation]:
                     # In every week, each rotation is assigned by min/max required residents
-                    problem += pulp.lpSum(other[week, resident, rotation] for resident in residents) >= rotationMinMax[rotation][0] #min
-                    problem += pulp.lpSum(other[week, resident, rotation] for resident in residents) <= rotationMinMax[rotation][1] #max
+                    problem += pulp.lpSum(other[week, resident, rotation] for resident in residents) >= rotationMinMaxResidents[rotation][0] #min
+                    problem += pulp.lpSum(other[week, resident, rotation] for resident in residents) <= rotationMinMaxResidents[rotation][1] #max
                 else:
                     # otherwise, if rotation does not span current week, no residents assigned
                     problem += pulp.lpSum(other[week, resident, rotation] for resident in residents) == 0
@@ -163,6 +165,32 @@ class AlgorithmStatusView(viewsets.ModelViewSet):
                 for rotation in otherRotations:
                     if week in rotationWeeks[rotation]:
                         problem += other[week, resident, rotation] == 0
+
+        # residents should be assigned between a min and max number of weeks on a rotation
+        for rotation in essentialRotations:
+            for week in rotationWeeks[rotation]:
+                #if (week - rotationMinMaxContinous[rotation][0]) in rotationWeeks[rotation]:
+                    #for resident in residents:
+                        #problem += (pulp.lpSum(essential[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][0], week + 1)) == rotationMinMaxContinous[rotation][0]) or (pulp.lpSum(essential[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][0], week + 1)) == 0)
+                if ((week - rotationMinMaxContinous[rotation][1] - 1) in rotationWeeks[rotation]):
+                    for resident in residents:
+                        problem += pulp.lpSum(essential[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][1] - 1, week + 1)) <= rotationMinMaxContinous[rotation][1]
+        for rotation in overnightRotations:
+            for week in rotationWeeks[rotation]:
+                #if (week - rotationMinMaxContinous[rotation][0]) in rotationWeeks[rotation]:
+                    #for resident in residents:
+                        #problem += (pulp.lpSum(overnight[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][0], week + 1)) == rotationMinMaxContinous[rotation][0]) or (pulp.lpSum(overnight[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][0], week + 1)) == 0)
+                if ((week - rotationMinMaxContinous[rotation][1] - 1) in rotationWeeks[rotation]):
+                    for resident in residents:
+                        problem += pulp.lpSum(overnight[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][1] - 1, week + 1)) <= rotationMinMaxContinous[rotation][1]
+        for rotation in otherRotations:
+            for week in rotationWeeks[rotation]:
+                #if (week - rotationMinMaxContinous[rotation][0]) in rotationWeeks[rotation]:
+                    #for resident in residents:
+                        #problem += (pulp.lpSum(other[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][0], week + 1)) == rotationMinMaxContinous[rotation][0]) or (pulp.lpSum(other[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][0], week + 1)) == 0)
+                if ((week - rotationMinMaxContinous[rotation][1] - 1) in rotationWeeks[rotation]):
+                    for resident in residents:
+                        problem += pulp.lpSum(other[someWeeks, resident, rotation] for someWeeks in range(week - rotationMinMaxContinous[rotation][1] - 1, week + 1)) <= rotationMinMaxContinous[rotation][1]
 
         for resident, alreadyScheduled in assigned.items():
             currentResident = Schedule.objects.get(email=resident)
@@ -219,24 +247,24 @@ class AlgorithmStatusView(viewsets.ModelViewSet):
                                 currentResident = Schedule.objects.get(email=resident)
                                 currentResident.generatedSchedule.update({week: rotation})
                                 currentResident.save()
-                                message = AlgorithmStatus(Status="For week " + str(week) + ", " + str(resident) + " is assigned to " + str(rotation))
-                                message.save()
+                                #message = AlgorithmStatus(Status="For week " + str(week) + ", " + str(resident) + " is assigned to " + str(rotation))
+                                #message.save()
                     for rotation in overnightRotations:
                         if week in rotationWeeks[rotation]:
                             if pulp.value(overnight[week, resident, rotation]) == 1:
                                 currentResident = Schedule.objects.get(email=resident)
                                 currentResident.generatedSchedule.update({week: rotation})
                                 currentResident.save()
-                                message = AlgorithmStatus(Status="For week " + str(week) + ", " + str(resident) + " is assigned to " + str(rotation))
-                                message.save()
+                                #message = AlgorithmStatus(Status="For week " + str(week) + ", " + str(resident) + " is assigned to " + str(rotation))
+                                #message.save()
                     for rotation in otherRotations:
                         if week in rotationWeeks[rotation]:
                             if pulp.value(other[week, resident, rotation]) == 1:
                                 currentResident = Schedule.objects.get(email=resident)
                                 currentResident.generatedSchedule.update({week: rotation})
                                 currentResident.save()
-                                message = AlgorithmStatus(Status="For week " + str(week) + ", " + str(resident) + " is assigned to " + str(rotation))
-                                message.save()
+                                #message = AlgorithmStatus(Status="For week " + str(week) + ", " + str(resident) + " is assigned to " + str(rotation))
+                                #message.save()
         else:
             pulpStatus = AlgorithmStatus(Status='Algorithm failed in creating schedule')
             pulpStatus.save()

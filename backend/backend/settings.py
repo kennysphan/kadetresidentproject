@@ -129,6 +129,5 @@ STATIC_URL = "/static/"
 AUTH_USER_MODEL = "useraccess.SchedulerUser" # Custom user model
 
 CORS_ORIGIN_WHITELIST = [
-    'http://localhost:3000',
-#    'http://localhost:3001',
+    'https://residentscheduler.netlify.app',
 ]

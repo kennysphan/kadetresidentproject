@@ -9,7 +9,7 @@ class Criteria(models.Model):
         ('4', 'PGY4'),
         ('5', 'PGY5'),
     )
-    RotationType = models.CharField(max_length=120)
+    RotationType = models.CharField(max_length=120) # name/label of rotation
     StartRotation = models.DateField(null=True, blank=True)
     EndRotation = models.DateField(null=True, blank=True)
     MinResident = models.PositiveIntegerField()
