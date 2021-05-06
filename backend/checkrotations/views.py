@@ -5,7 +5,7 @@ from rest_framework import viewsets
 from .serializers import RotationStatusSerializer
 from .models import RotationStatus
 from criteria.models import Criteria
-from useraccess.models import SchedulerUser
+#from useraccess.models import SchedulerUser
 from vacation.models import VacationRequests
 from schedule.models import Schedule
 from schedule.models import RotationsByWeek
@@ -33,20 +33,19 @@ class RotationStatusView(viewsets.ModelViewSet):
         messageOne = RotationStatus(Status='Status: Adding resident requests to schedule')
         messageOne.save()
 
-        for resident in SchedulerUser.objects.all():
+        for resident in VacationRequests.objects.all():
             # clears resident's schedule for weekTable array
-            if resident.AccessLevel != 'NA':
-                weekTableRow = []
-                weekTableRow.append(resident.email)
-                pgy = int(resident.AccessLevel)
-                weekTableRow.append(pgy)
-                for i in range(52):
-                    weekTableRow.append('available')
-                weekTable.append(weekTableRow)
+            weekTableRow = []
+            weekTableRow.append(resident.email)
+            pgy = int(resident.postGradLevel)
+            weekTableRow.append(pgy)
+            for i in range(52):
+                weekTableRow.append('available')
+            weekTable.append(weekTableRow)
 
         for requests in VacationRequests.objects.all():
 
-            resident = SchedulerUser.objects.get(email=requests.email)
+            #resident = SchedulerUser.objects.get(email=requests.email)
             scheduleElement = None
 
             if Schedule.objects.filter(email=requests.email).exists():
@@ -54,8 +53,8 @@ class RotationStatusView(viewsets.ModelViewSet):
             else:
                 scheduleElement = Schedule(
                     email = requests.email,
-                    name = resident.last_name + ", " + resident.first_name,
-                    postGradLevel = resident.AccessLevel,
+                    name = requests.last_name + ", " + requests.first_name,
+                    postGradLevel = requests.postGradLevel,
                     generatedSchedule = {},
                     blackoutRotations = {},
                     assignedRotations = {}

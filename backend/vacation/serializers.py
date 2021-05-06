@@ -4,4 +4,4 @@ from .models import VacationRequests
 class RequestsSerializer(serializers.ModelSerializer): 
     class Meta: 
         model = VacationRequests 
-        fields = ['id', 'email', 'requestOne', 'requestTwo', 'requestThree']
+        fields = ['id', 'email', 'first_name', 'last_name', 'postGradLevel', 'requestOne', 'requestTwo', 'requestThree']

@@ -8,7 +8,7 @@ import math
 import pulp
 import datetime
 from criteria.models import Criteria
-from useraccess.models import SchedulerUser
+#from useraccess.models import SchedulerUser
 from vacation.models import VacationRequests
 from schedule.models import Schedule
 from settings.models import Settings
